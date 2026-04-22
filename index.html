@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chaos Coffee Pro</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#1e1e1e;
+  color:white;
+  text-align:center;
+}
+
+.container{
+  max-width:900px;
+  margin:auto;
+  padding:15px;
+}
+
+/* адаптивные инпуты */
+input{
+  padding:10px;
+  margin:5px;
+  border-radius:8px;
+  border:none;
+  width:100%;
+  max-width:200px;
+}
+
+/* кнопки */
+button{
+  padding:10px 15px;
+  margin:10px 5px;
+  border:none;
+  border-radius:8px;
+  background:#6f4e37;
+  color:white;
+  cursor:pointer;
+  width:100%;
+  max-width:250px;
+}
+button:hover{opacity:.9}
+
+/* панели */
+.panel{
+  background:#2c2c2c;
+  padding:15px;
+  border-radius:12px;
+  margin-top:10px;
+}
+
+/* результат */
+.result{
+  font-size:18px;
+  margin-top:10px;
+}
+
+.stable{color:#00c853}
+.warning{color:#ffd600}
+.danger{color:#ff1744}
+
+/* адаптивный canvas */
+canvas{
+  background:white;
+  border-radius:10px;
+  margin-top:15px;
+  width:100%;
+  height:auto;
+}
+
+/* сетка для полей */
+.form-grid{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+/* мобильная версия */
+@media(max-width:600px){
+  h2{font-size:20px}
+  .result{font-size:16px}
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>☕ Chaos Coffee — Анализ бизнеса</h2>
+
+<div class="panel">
+<h3>Введи данные кофейни</h3>
+
+<div class="form-grid">
+<input id="price" type="number" placeholder="Цена кофе" value="500">
+<input id="clients" type="number" placeholder="Клиенты" value="80">
+<input id="expenses" type="number" placeholder="Расходы" value="20000">
+<input id="ads" type="number" placeholder="Реклама" value="1">
+<input id="adsCost" type="number" placeholder="Цена рекламы" value="5000">
+</div>
+
+<button onclick="analyze()">📊 Анализировать</button>
+</div>
+
+<div class="panel">
+<h3>Результат</h3>
+<div class="result" id="profit">Прибыль: 0</div>
+<div class="result" id="risk">Риск: -</div>
+</div>
+
+<canvas id="chart"></canvas>
+
+</div>
+
+<script>
+let x=10,y=10,z=10;
+let history=[];
+
+function analyze(){
+  let price=+document.getElementById("price").value;
+  let clients=+document.getElementById("clients").value;
+  let expenses=+document.getElementById("expenses").value;
+  let ads=+document.getElementById("ads").value;
+  let adsCost=+document.getElementById("adsCost").value;
+
+  let income=price*clients;
+  let adExpenses = ads * adsCost;
+  let totalExpenses = expenses + adExpenses;
+  let profit = income - totalExpenses;
+
+  updateChaos(income,totalExpenses);
+  updateRisk();
+
+  history.push(profit);
+
+  document.getElementById("profit").innerText =
+    "Прибыль: " + profit + " (расходы: " + totalExpenses + ")";
+
+  drawChart();
+}
+
+function updateChaos(income,expenses){
+  let dx=10*(y-x);
+  let dy=x*(28-z)-y;
+  let dz=x*y-2.66*z;
+
+  x+=dx*0.01+income*0.00001;
+  y+=dy*0.01+income*0.00001;
+  z+=dz*0.01+expenses*0.00001;
+}
+
+function updateRisk(){
+  let chaos=Math.abs(x)+Math.abs(y)+Math.abs(z);
+  let el=document.getElementById("risk");
+
+  if(chaos<50){ el.innerText="🟢 Стабильно"; el.className="result stable"; }
+  else if(chaos<100){ el.innerText="🟡 Риск"; el.className="result warning"; }
+  else{ el.innerText="🔴 Хаос"; el.className="result danger"; }
+}
+
+function drawChart(){
+  let c=document.getElementById("chart");
+
+  // адаптивный размер canvas
+  c.width = c.clientWidth;
+  c.height = 300;
+
+  let ctx=c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+
+  ctx.fillStyle="#ffffff";
+  ctx.fillRect(0,0,c.width,c.height);
+
+  ctx.strokeStyle="#ccc";
+  ctx.beginPath();
+  ctx.moveTo(40,10);
+  ctx.lineTo(40,c.height-10);
+  ctx.lineTo(c.width-10,c.height-10);
+  ctx.stroke();
+
+  if(history.length===0) return;
+
+  let max=Math.max(...history.map(v=>Math.abs(v)),1);
+
+  ctx.beginPath();
+  ctx.strokeStyle="#6f4e37";
+  ctx.lineWidth=2;
+
+  history.forEach((v,i)=>{
+    let px=40+i*30;
+    let py=c.height/2-(v/max)*100;
+
+    if(i===0) ctx.moveTo(px,py);
+    else ctx.lineTo(px,py);
+  });
+  ctx.stroke();
+
+  ctx.fillStyle="#6f4e37";
+  history.forEach((v,i)=>{
+    let px=40+i*30;
+    let py=c.height/2-(v/max)*100;
+    ctx.beginPath();
+    ctx.arc(px,py,3,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  let last=history[history.length-1];
+  ctx.fillStyle="#000";
+  ctx.font="12px Arial";
+  ctx.fillText("Последняя прибыль: "+last, c.width-220,20);
+
+  ctx.fillText("+"+max, 5, 60);
+  ctx.fillText("0", 10, c.height/2);
+  ctx.fillText("-"+max, 5, c.height-50);
+}
+</script>
+
+</body>
+</html>
